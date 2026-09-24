@@ -126,7 +126,7 @@ class LightPointsViewshed(QgsProcessingAlgorithm):
                           (self.DEM,
             self.tr('DSM (Digital surface model)')))
             
-        self.addParameter(QgsProcessingParameterRasterLayer(self.RASTER_BATI_INPUT, self.tr('Raster buildings vegetation'),defaultValue=None))
+        self.addParameter(QgsProcessingParameterRasterLayer(self.RASTER_BATI_INPUT, self.tr('Raster buildings vegetation'),defaultValue=None,optional=True))
         
         self.addParameter(QgsProcessingParameterBoolean(
             self.USE_CURVATURE,
@@ -237,7 +237,8 @@ class LightPointsViewshed(QgsProcessingAlgorithm):
             qgsUtils.checkProjectionUnit(self.inputExtent)
         qgsUtils.checkProjectionUnit(self.inputLightPoints)
         qgsUtils.checkProjectionUnit(self.raster)
-        qgsUtils.checkProjectionUnit(self.inputRasterBatiVege)
+        if self.inputRasterBatiVege is not None:
+            qgsUtils.checkProjectionUnit(self.inputRasterBatiVege)
         
         
 # --------------- get observers (light points) ------------------       
@@ -264,7 +265,10 @@ class LightPointsViewshed(QgsProcessingAlgorithm):
             
         
         # Découper le raster Bati selon une emprise
-        outputs[self.SLICED_RASTER_BATI] = qgsTreatments.applyClipRasterByExtent(self.inputRasterBatiVege, outputs[self.EXTENT_ZONE], QgsProcessing.TEMPORARY_OUTPUT, context=context,feedback=feedback)
+        if self.inputRasterBatiVege is not None:
+            outputs[self.SLICED_RASTER_BATI] = qgsTreatments.applyClipRasterByExtent(self.inputRasterBatiVege, outputs[self.EXTENT_ZONE], QgsProcessing.TEMPORARY_OUTPUT, context=context,feedback=feedback)
+        else:
+            self.SLICED_RASTER_BATI = None
         
         # Extraire par localisation
         temp_path_pts = QgsProcessingUtils.generateTempFilename('temp_path_pts.gpkg')
@@ -298,23 +302,28 @@ class LightPointsViewshed(QgsProcessingAlgorithm):
         
         # Mise à 0 nécessaire de la hauteur de la source si interescte le bati ou la végétation
         feedback.setCurrentStep(1)
-        # Raster vers vecteur du raster bati vegetation
-        outputs['PolygoniseBatiVege'] = qgsTreatments.applyPolygonize(outputs[self.SLICED_RASTER_BATI], 'DN', QgsProcessing.TEMPORARY_OUTPUT, context=context, feedback=feedback)
-        
-        # Jointure par localisation entre les points et bati-végétation
-        temp_path_join_pts_bati = QgsProcessingUtils.generateTempFilename('temp_path_join_pts_bati.gpkg')
-        qgsTreatments.joinByLoc(outputs['CalculFieldRadius'],outputs['PolygoniseBatiVege'],predicates=[0],out_path=temp_path_join_pts_bati,discard=False,method=1,context=context,feedback=feedback)
-        outputs['JoinPointsBatiVege'] = qgsUtils.loadVectorLayer(temp_path_join_pts_bati)
-        
         # Calculatrice de champ hauteur source lumière (si intersection : DN non NULL, on met la hauteur à 0
         if parameters[self.LIGHT_SOURCE_HEIGHT_FIELD] != "" and parameters[self.LIGHT_SOURCE_HEIGHT_FIELD] is not None and parameters[self.LIGHT_SOURCE_HEIGHT_FIELD] != NULL:
             formula = 'CASE WHEN  "DN" IS NULL THEN "'+str(parameters[self.LIGHT_SOURCE_HEIGHT_FIELD])+'" ELSE 0 END'
         else:
             formula = 'CASE WHEN  "DN" IS NULL THEN '+str(parameters[self.LIGHT_SOURCE_HEIGHT])+' ELSE 0 END'
-        
+
+        # Raster vers vecteur du raster bati vegetation
+        if self.SLICED_RASTER_BATI is not None:
+            outputs['PolygoniseBatiVege'] = qgsTreatments.applyPolygonize(outputs[self.SLICED_RASTER_BATI], 'DN', QgsProcessing.TEMPORARY_OUTPUT, context=context, feedback=feedback)
+            
+            # Jointure par localisation entre les points et bati-végétation
+            temp_path_join_pts_bati = QgsProcessingUtils.generateTempFilename('temp_path_join_pts_bati.gpkg')
+            qgsTreatments.joinByLoc(outputs['CalculFieldRadius'],outputs['PolygoniseBatiVege'],predicates=[0],out_path=temp_path_join_pts_bati,discard=False,method=1,context=context,feedback=feedback)
+            outputs['JoinPointsBatiVege'] = qgsUtils.loadVectorLayer(temp_path_join_pts_bati)
+            points = outputs['JoinPointsBatiVege']
+        else:
+            points = outputs['CalculFieldRadius']
+
         temp_path_lum_pts = QgsProcessingUtils.generateTempFilename('temp_path_lum_pts.gpkg')
-        qgsTreatments.applyFieldCalculator(outputs['JoinPointsBatiVege'],self.SOURCE_FIELD, temp_path_lum_pts, formula, 10, 4, 0, context=context,feedback=feedback)
+        qgsTreatments.applyFieldCalculator(points,self.SOURCE_FIELD, temp_path_lum_pts, formula, 10, 4, 0, context=context,feedback=feedback)
         outputs['LightPoints'] = qgsUtils.loadVectorLayer(temp_path_lum_pts)
+
 
 # --------------- verification of inputs ------------------
         # ajout pour découper si MNS + grand que emprise
