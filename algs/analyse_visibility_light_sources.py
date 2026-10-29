@@ -176,8 +176,11 @@ class AnalyseVisibilityLightSources(QgsProcessingAlgorithm):
         feedback.setCurrentStep(step)
         if feedback.isCanceled():
             return {}
-        
-        if self.inputRasterBati is not None:
+
+        rasterNbSrc = None
+        if self.inputRasterBati is None:
+            rasterNbSrc = outputs[self.SLICED_RASTER_VIEWSHED]
+        else:
             # Calculatrice Raster enleve bati haut
             # Masque bati
             #Si hauteur > h_remplie  : 0 Sinon 1
@@ -199,25 +202,21 @@ class AnalyseVisibilityLightSources(QgsProcessingAlgorithm):
 
             # Mise à zéro du pixel sur bati supérieur à une certaine hauteur
             outputs['BatiWithHeightMask'] = qgsTreatments.applyRasterCalcAB(outputs[self.SLICED_RASTER_VIEWSHED], outputs['FillCellsWithoutData'], self.outputbSrcRaster, 'A*B',nodata_val=None, out_type=Qgis.DataType.Int16, context=context,feedback=feedback)
-            self.results[self.OUTPUT_NB_SRC_RASTER] = outputs['BatiWithHeightMask']
-            
+            rasterNbSrc = self.results[self.OUTPUT_NB_SRC_RASTER] = outputs['BatiWithHeightMask']
+
             step+=1
             feedback.setCurrentStep(step)
             if feedback.isCanceled():
                 return {}
-        else:
-            self.results[self.OUTPUT_NB_SRC_RASTER] = outputs[self.SLICED_RASTER_VIEWSHED]
 
         # Statistiques de zone (moyenne)
         stats = [2,4] # Moyenne,Ecart-type
-        self.results[self.OUTPUT_NB_SRC_VIS] = qgsTreatments.rasterZonalStats(outputs['GridTempExtract'], self.results[self.OUTPUT_NB_SRC_RASTER], self.outputNbSrcVis, prefix='_',stats=stats, context=context,feedback=feedback)
+        self.results[self.OUTPUT_NB_SRC_VIS] = qgsTreatments.rasterZonalStats(outputs['GridTempExtract'], rasterNbSrc, self.outputNbSrcVis, prefix='_',stats=stats, context=context,feedback=feedback)
 
         step+=1
         feedback.setCurrentStep(step)
         if feedback.isCanceled():
             return {}
-
-        print(step)
         
         self.LAST_BOUNDS_VALUE = parameters[self.LAST_BOUNDS]
         
