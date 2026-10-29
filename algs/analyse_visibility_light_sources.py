@@ -49,7 +49,7 @@ class AnalyseVisibilityLightSources(QgsProcessingAlgorithm):
     def initAlgorithm(self, config=None):
         self.addParameter(QgsProcessingParameterFeatureSource(self.EXTENT_ZONE, self.tr('Extent zone'), [QgsProcessing.SourceType.TypeVectorPolygon], defaultValue=None, optional=True))
         self.addParameter(QgsProcessingParameterRasterLayer(self.VIEWSHED_INPUT, self.tr('Layer resulting from viewshed processing'), defaultValue=None))
-        self.addParameter(QgsProcessingParameterRasterLayer(self.RASTER_BATI_INPUT, self.tr('Raster bati'), defaultValue=None))
+        self.addParameter(QgsProcessingParameterRasterLayer(self.RASTER_BATI_INPUT, self.tr('Raster bati'), defaultValue=None, optional=True))
         self.addParameter(QgsProcessingParameterNumber(self.MASK_HEIGHT, self.tr('Max. observer height, meters'), type=QgsProcessingParameterNumber.Type.Double, defaultValue=1))
         
         self.addParameter(QgsProcessingParameterFeatureSource(self.GRID_LAYER_INPUT, self.tr('Grid Layer'), [QgsProcessing.SourceType.TypeVectorPolygon], defaultValue=None, optional=True))
@@ -97,8 +97,9 @@ class AnalyseVisibilityLightSources(QgsProcessingAlgorithm):
                 outputs[self.SLICED_RASTER_VIEWSHED] = self.inputViewshed # le raster n'est pas découpé
                
                # le raster bati est découpé pour avoir la même taille que le viewshed
-                outputs[self.SLICED_RASTER_BATI] = qgsTreatments.applyClipRasterByExtent(self.inputRasterBati, outputs[self.EXTENT_ZONE], QgsProcessing.TEMPORARY_OUTPUT, context=context,feedback=feedback)
-                
+                if self.inputRasterBati is not None:
+                    outputs[self.SLICED_RASTER_BATI] = qgsTreatments.applyClipRasterByExtent(self.inputRasterBati, outputs[self.EXTENT_ZONE], QgsProcessing.TEMPORARY_OUTPUT, context=context,feedback=feedback)
+
                 step+=2
                 feedback.setCurrentStep(step)
                 if feedback.isCanceled():
@@ -116,7 +117,8 @@ class AnalyseVisibilityLightSources(QgsProcessingAlgorithm):
                     return {}
                 
                 # Découper le raster Bati selon une emprise (celle de la grille)
-                outputs[self.SLICED_RASTER_BATI] = qgsTreatments.applyClipRasterByExtent(self.inputRasterBati, self.inputGrid, QgsProcessing.TEMPORARY_OUTPUT, context=context,feedback=feedback)
+                if self.inputRasterBati is not None:
+                    outputs[self.SLICED_RASTER_BATI] = qgsTreatments.applyClipRasterByExtent(self.inputRasterBati, self.inputGrid, QgsProcessing.TEMPORARY_OUTPUT, context=context,feedback=feedback)
                 
                 step+=1
                 feedback.setCurrentStep(step)
@@ -133,7 +135,8 @@ class AnalyseVisibilityLightSources(QgsProcessingAlgorithm):
                 return {}
                 
             # Découper le raster Bati selon une emprise
-            outputs[self.SLICED_RASTER_BATI] =  qgsTreatments.applyClipRasterByExtent(self.inputRasterBati, self.inputExtent, QgsProcessing.TEMPORARY_OUTPUT, context=context,feedback=feedback)
+            if self.inputRasterBati is not None:
+                outputs[self.SLICED_RASTER_BATI] =  qgsTreatments.applyClipRasterByExtent(self.inputRasterBati, self.inputExtent, QgsProcessing.TEMPORARY_OUTPUT, context=context,feedback=feedback)
             
             step+=1
             feedback.setCurrentStep(step)
@@ -174,39 +177,41 @@ class AnalyseVisibilityLightSources(QgsProcessingAlgorithm):
         if feedback.isCanceled():
             return {}
         
+        if self.inputRasterBati is not None:
+            # Calculatrice Raster enleve bati haut
+            # Masque bati
+            #Si hauteur > h_remplie  : 0 Sinon 1
+            formula = '1*(logical_and(A<= '+str(parameters[self.MASK_HEIGHT])+', True))' #'1*(logical_and(A<= B, True))'
+            outputs['RasterBatiFilterHeight'] = qgsTreatments.applyRasterCalcAB(outputs[self.SLICED_RASTER_BATI], None, QgsProcessing.TEMPORARY_OUTPUT, formula, nodata_val=None, context=context,feedback=feedback)
             
-        # Calculatrice Raster enleve bati haut
-        # Masque bati
-        #Si hauteur > h_remplie  : 0 Sinon 1
-        formula = '1*(logical_and(A<= '+str(parameters[self.MASK_HEIGHT])+', True))' #'1*(logical_and(A<= B, True))'
-        outputs['RasterBatiFilterHeight'] = qgsTreatments.applyRasterCalcAB(outputs[self.SLICED_RASTER_BATI], None, QgsProcessing.TEMPORARY_OUTPUT, formula, nodata_val=None, context=context,feedback=feedback)
-        
-        step+=1
-        feedback.setCurrentStep(step)
-        if feedback.isCanceled():
-            return {}
+            step+=1
+            feedback.setCurrentStep(step)
+            if feedback.isCanceled():
+                return {}
 
-        # Remplir les cellules sans données
-        outputs['FillCellsWithoutData'] = qgsTreatments.applyFillNoData(outputs['RasterBatiFilterHeight'], QgsProcessing.TEMPORARY_OUTPUT, context=context,feedback=feedback)
-        
-        step+=1
-        feedback.setCurrentStep(step)
-        if feedback.isCanceled():
-            return {}
+            # Remplir les cellules sans données
+            outputs['FillCellsWithoutData'] = qgsTreatments.applyFillNoData(outputs['RasterBatiFilterHeight'], QgsProcessing.TEMPORARY_OUTPUT, context=context,feedback=feedback)
 
-        # Mise à zéro du pixel sur bati supérieur à une certaine hauteur
-        outputs['BatiWithHeightMask'] = qgsTreatments.applyRasterCalcAB(outputs[self.SLICED_RASTER_VIEWSHED], outputs['FillCellsWithoutData'], self.outputbSrcRaster, 'A*B',nodata_val=None, out_type=Qgis.DataType.Int16, context=context,feedback=feedback)
-        self.results[self.OUTPUT_NB_SRC_RASTER] = outputs['BatiWithHeightMask']
-        
-        step+=1
-        feedback.setCurrentStep(step)
-        if feedback.isCanceled():
-            return {}
+            step+=1
+            feedback.setCurrentStep(step)
+            if feedback.isCanceled():
+                return {}
+
+            # Mise à zéro du pixel sur bati supérieur à une certaine hauteur
+            outputs['BatiWithHeightMask'] = qgsTreatments.applyRasterCalcAB(outputs[self.SLICED_RASTER_VIEWSHED], outputs['FillCellsWithoutData'], self.outputbSrcRaster, 'A*B',nodata_val=None, out_type=Qgis.DataType.Int16, context=context,feedback=feedback)
+            self.results[self.OUTPUT_NB_SRC_RASTER] = outputs['BatiWithHeightMask']
+            
+            step+=1
+            feedback.setCurrentStep(step)
+            if feedback.isCanceled():
+                return {}
+        else:
+            self.results[self.OUTPUT_NB_SRC_RASTER] = outputs[self.SLICED_RASTER_VIEWSHED]
 
         # Statistiques de zone (moyenne)
         stats = [2,4] # Moyenne,Ecart-type
-        self.results[self.OUTPUT_NB_SRC_VIS] = qgsTreatments.rasterZonalStats(outputs['GridTempExtract'], outputs['BatiWithHeightMask'], self.outputNbSrcVis, prefix='_',stats=stats, context=context,feedback=feedback)
-        
+        self.results[self.OUTPUT_NB_SRC_VIS] = qgsTreatments.rasterZonalStats(outputs['GridTempExtract'], self.results[self.OUTPUT_NB_SRC_RASTER], self.outputNbSrcVis, prefix='_',stats=stats, context=context,feedback=feedback)
+
         step+=1
         feedback.setCurrentStep(step)
         if feedback.isCanceled():
