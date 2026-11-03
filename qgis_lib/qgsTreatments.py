@@ -690,6 +690,19 @@ def applyClipRasterByExtent(input_raster, input_extent, output, data_type=0, opt
     }
     return applyProcessingAlg("gdal","cliprasterbyextent", parameters,context,feedback)
 
+def applyClipRasterByPolygon(input_raster, input_shape, output, data_type=0, options=gtiff_opts_pipe, no_data=None, context=None,feedback=None):
+    parameters = {
+        'DATA_TYPE': data_type,  # Utiliser le type de donnée de la couche en entrée
+        'EXTRA': '',
+        'INPUT': input_raster,
+        'NODATA': no_data,
+        'OPTIONS' : options,
+        'OVERCRS': False,
+        'MASK': input_shape,
+        'OUTPUT': output
+    }
+    return applyProcessingAlg("gdal","cliprasterbymasklayer", parameters,context,feedback)
+
 def applyPolygonize(input_layer, field, output, band=1, context=None,feedback=None):
     parameters = {
         'BAND': band,
@@ -754,3 +767,12 @@ def applyFillNoData(input_raster, output, band=1, fill_value=1, context=None,fee
         'OUTPUT': output
     }
     return applyProcessingAlg("native","fillnodata", parameters,context,feedback)
+
+def applyPixelsToPoints(input_raster, output, band=1, context=None,feedback=None):
+    parameters = {
+        'INPUT_RASTER': input_raster,
+        'BAND': band,
+        'FIELD_NAME': 'VALUE',
+        'OUTPUT': output
+    }
+    return applyProcessingAlg("native","pixelstopoints", parameters,context,feedback)
