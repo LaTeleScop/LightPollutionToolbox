@@ -5,6 +5,8 @@ Group : Visibility Light Sources
 With QGIS : 32215
 """
 
+from os import path
+
 from qgis.PyQt.QtCore import QCoreApplication
 from qgis.core import (
     QgsProcessing,
@@ -21,7 +23,7 @@ from qgis.core import (
     QgsProcessingParameterFeatureSource,
     QgsProcessingException
 )
-from ..qgis_lib import qgsUtils, qgsTreatments, styles
+from ..qgis_lib import qgsUtils, qgsTreatments
 
 
 class AnalyseVisibilityLightSources(QgsProcessingAlgorithm):
@@ -41,9 +43,6 @@ class AnalyseVisibilityLightSources(QgsProcessingAlgorithm):
     OUTPUT_NB_SRC_RASTER = 'OutputNbSrcRaster'
     OUTPUT_NB_SRC_VIS = 'OutputNbSrcVis'
     
-    FIELD_STYLE = '_mean'
-    CLASS_BOUNDS_NB_SRC = [0,0,5,10,20,50] # on double la valeur 0 pour avoir un premier pas avec uniquement ces valeurs
-    # LAST_BOUNDS_VALUE = 50
     results = {}
     
     def initAlgorithm(self, config=None):
@@ -245,10 +244,11 @@ class AnalyseVisibilityLightSources(QgsProcessingAlgorithm):
         if not out_layer:
             raise QgsProcessingException("No layer found for " + str(self.results[self.OUTPUT_NB_SRC_VIS]))
 
-        # Applique la symbologie par défault
-        styles.setCustomClassesInd_Pol_Graduate(out_layer, self.FIELD_STYLE, self.CLASS_BOUNDS_NB_SRC) # affecte une couleur par valeur
-
-        #bounds = styles.getQuantileBounds(out_layer, self.FIELD_STYLE, lastBounds=self.LAST_BOUNDS_VALUE)
-        #styles.setCustomClassesInd_Pol_Graduate(out_layer, self.FIELD_STYLE, bounds)
+        qml_path = path.join(path.dirname(path.dirname(__file__)), 'assets', 'viewshed_grid.qml')
+        msg, ok = out_layer.loadNamedStyle(qml_path)
+        if not ok:
+            feedback.reportError(f"Could not apply style {qml_path}: {msg}")
+        out_layer.triggerRepaint()
+        out_layer.emitStyleChanged()  # refresh the legend in the layer tree
 
         return self.results

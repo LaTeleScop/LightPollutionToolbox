@@ -449,7 +449,8 @@ class LightPointsViewshed(QgsProcessingAlgorithm):
         # self.output_path = qgsUtils.loadRasterLayer(temp_decoup_raster)
         
         results[self.OUTPUT] = self.output_path
-            
+        self.results = results
+
             
         # for output in self.outputDefinitions():
             # outputName = output.name()
@@ -461,6 +462,25 @@ class LightPointsViewshed(QgsProcessingAlgorithm):
         return results
 
     
+    def postProcessAlgorithm(self, context, feedback):
+        # Results are missing when the algorithm was canceled
+        results = getattr(self, 'results', {})
+        if self.OUTPUT not in results:
+            return results
+
+        out_layer = QgsProcessingUtils.mapLayerFromString(results[self.OUTPUT], context)
+        if not out_layer:
+            raise QgsProcessingException(f"No layer found for {results[self.OUTPUT]}")
+
+        qml_path = path.join(path.dirname(path.dirname(__file__)), 'assets', 'viewshed.qml')
+        msg, ok = out_layer.loadNamedStyle(qml_path)
+        if not ok:
+            feedback.reportError(f"Could not apply style {qml_path}: {msg}")
+        out_layer.triggerRepaint()
+        out_layer.emitStyleChanged()  # refresh the legend in the layer tree
+
+        return results
+
     def name(self):
         """
         Returns the algorithm name, used for identifying the algorithm. This
