@@ -25,13 +25,11 @@
 
 from qgis.core import (
     Qgis,
-    QgsProcessing,
     QgsProcessingUtils,
     QgsFeatureRequest,
     QgsProcessingContext,
     QgsRasterLayer
 )
-from qgis.PyQt.QtCore import QVariant
 from qgis.PyQt.QtGui import QGuiApplication
 
 import os.path
