@@ -42,8 +42,8 @@ class AnalyseVisibilityLightSources(QgsProcessingAlgorithm):
     OUTPUT_NB_SRC_VIS = 'OutputNbSrcVis'
     
     FIELD_STYLE = '_mean'
-    # CLASS_BOUNDS_NB_SRC = [0,0,5,10,20,50] # on double la valeur 0 pour avoir un premier pas avec uniquement ces valeurs
-    LAST_BOUNDS_VALUE = 50
+    CLASS_BOUNDS_NB_SRC = [0,0,5,10,20,50] # on double la valeur 0 pour avoir un premier pas avec uniquement ces valeurs
+    # LAST_BOUNDS_VALUE = 50
     results = {}
     
     def initAlgorithm(self, config=None):
@@ -211,14 +211,14 @@ class AnalyseVisibilityLightSources(QgsProcessingAlgorithm):
 
         # Statistiques de zone (moyenne)
         stats = [2,4] # Moyenne,Ecart-type
-        self.results[self.OUTPUT_NB_SRC_VIS] = qgsTreatments.rasterZonalStats(outputs['GridTempExtract'], rasterNbSrc, self.outputNbSrcVis, prefix='_',stats=stats, context=context,feedback=feedback)
+        self.results[self.OUTPUT_NB_SRC_VIS] = qgsTreatments.rasterZonalStats(outputs['GridTempExtract'], rasterNbSrc, self.outputNbSrcVis, prefix='_', stats=stats, context=context,feedback=feedback)
 
         step+=1
         feedback.setCurrentStep(step)
         if feedback.isCanceled():
             return {}
         
-        self.LAST_BOUNDS_VALUE = parameters[self.LAST_BOUNDS]
+        #self.LAST_BOUNDS_VALUE = parameters[self.LAST_BOUNDS]
         
         return self.results
 
@@ -244,12 +244,11 @@ class AnalyseVisibilityLightSources(QgsProcessingAlgorithm):
         out_layer = QgsProcessingUtils.mapLayerFromString(self.results[self.OUTPUT_NB_SRC_VIS],context)
         if not out_layer:
             raise QgsProcessingException("No layer found for " + str(self.results[self.OUTPUT_NB_SRC_VIS]))
-        
+
         # Applique la symbologie par défault
-        # styles.setCustomClassesInd_Pol_Graduate(out_layer, self.FIELD_STYLE, self.CLASS_BOUNDS_NB_SRC) # affecte une couleur par valeur
-        # styles.setRdYlGnGraduatedStyle2(out_layer, self.FIELD_STYLE)
-        
-        bounds = styles.getQuantileBounds(out_layer, self.FIELD_STYLE, lastBounds=self.LAST_BOUNDS_VALUE)
-        styles.setCustomClassesInd_Pol_Graduate(out_layer, self.FIELD_STYLE, bounds)
+        styles.setCustomClassesInd_Pol_Graduate(out_layer, self.FIELD_STYLE, self.CLASS_BOUNDS_NB_SRC) # affecte une couleur par valeur
+
+        #bounds = styles.getQuantileBounds(out_layer, self.FIELD_STYLE, lastBounds=self.LAST_BOUNDS_VALUE)
+        #styles.setCustomClassesInd_Pol_Graduate(out_layer, self.FIELD_STYLE, bounds)
         
         return self.results
