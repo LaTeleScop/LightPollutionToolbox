@@ -239,7 +239,7 @@ class AnalyseVisibilityLightSources(QgsProcessingAlgorithm):
 
     def createInstance(self):
         return AnalyseVisibilityLightSources()
-        
+
     def postProcessAlgorithm(self,context,feedback):
         out_layer = QgsProcessingUtils.mapLayerFromString(self.results[self.OUTPUT_NB_SRC_VIS],context)
         if not out_layer:
@@ -250,5 +250,5 @@ class AnalyseVisibilityLightSources(QgsProcessingAlgorithm):
 
         #bounds = styles.getQuantileBounds(out_layer, self.FIELD_STYLE, lastBounds=self.LAST_BOUNDS_VALUE)
         #styles.setCustomClassesInd_Pol_Graduate(out_layer, self.FIELD_STYLE, bounds)
-        
+
         return self.results
