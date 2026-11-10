@@ -59,7 +59,7 @@ class AnalyseVisibilityLightSources(QgsProcessingAlgorithm):
         
         self.addParameter(QgsProcessingParameterNumber(self.LAST_BOUNDS, self.tr('Bounds for the last class of symbology'), type=QgsProcessingParameterNumber.Type.Double, defaultValue=50))
 
-        self.addParameter(QgsProcessingParameterRasterDestination(self.OUTPUT_NB_SRC_RASTER, self.tr('Output Raster Number of visible lights'), createByDefault=True, defaultValue=None))
+        self.addParameter(QgsProcessingParameterRasterDestination(self.OUTPUT_NB_SRC_RASTER, self.tr('Output Raster Number of visible lights'), optional=True, createByDefault=False, defaultValue=None))
         self.addParameter(QgsProcessingParameterVectorDestination(self.OUTPUT_NB_SRC_VIS, self.tr('Output Number of visible lights per grid'), type=QgsProcessing.SourceType.TypeVectorAnyGeometry, createByDefault=True, defaultValue=None))
     
     def parseParams(self, parameters, context, feedback):
