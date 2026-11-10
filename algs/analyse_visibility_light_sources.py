@@ -37,7 +37,7 @@ class AnalyseVisibilityLightSources(QgsProcessingAlgorithm):
     TYPE_GRID = 'TypeOfGrid'
     RASTER_BATI_INPUT = 'RasterBatiInput'
     GRID_LAYER_INPUT = 'GridLayerInput'
-    LAST_BOUNDS = 'LastBounds'
+    #LAST_BOUNDS = 'LastBounds'
     SLICED_RASTER_VIEWSHED = 'SlicedRasterViewshed'
     SLICED_RASTER_BATI = 'SlicedRasterBati'
     OUTPUT_NB_SRC_RASTER = 'OutputNbSrcRaster'
@@ -56,7 +56,7 @@ class AnalyseVisibilityLightSources(QgsProcessingAlgorithm):
         self.addParameter(QgsProcessingParameterNumber(self.DIM_GRID, self.tr('Grid diameter if no grid layer, meters'), type=QgsProcessingParameterNumber.Type.Double, defaultValue=50))
         self.addParameter(QgsProcessingParameterEnum(self.TYPE_GRID, self.tr('Type of grid if no grid layer'), options=['Rectangle','Diamond','Hexagon'], allowMultiple=False, defaultValue=2))
         
-        self.addParameter(QgsProcessingParameterNumber(self.LAST_BOUNDS, self.tr('Bounds for the last class of symbology'), type=QgsProcessingParameterNumber.Type.Double, defaultValue=50))
+        #self.addParameter(QgsProcessingParameterNumber(self.LAST_BOUNDS, self.tr('Bounds for the last class of symbology'), type=QgsProcessingParameterNumber.Type.Double, defaultValue=50))
 
         self.addParameter(QgsProcessingParameterRasterDestination(self.OUTPUT_NB_SRC_RASTER, self.tr('Output Raster Number of visible lights'), optional=True, createByDefault=False, defaultValue=None))
         self.addParameter(QgsProcessingParameterVectorDestination(self.OUTPUT_NB_SRC_VIS, self.tr('Output Number of visible lights per grid'), type=QgsProcessing.SourceType.TypeVectorAnyGeometry, createByDefault=True, defaultValue=None))
